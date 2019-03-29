@@ -1,0 +1,61 @@
+#include <Stepper.h>
+
+unsigned short sec = 0;
+const int stepsPerRevolution = 200;  // change this to fit the number of steps per revolution
+// for your motor
+
+
+// initialize the stepper library on pins 8 through 11:+
+Stepper myStepper(stepsPerRevolution, 8, 9, 10, 11); //PINS
+
+int stepCount = 0;  // number of steps the motor has taken
+bool hourFlag = false; // Set this flag to true if an hour has passed
+bool even = false; 
+
+void setup(){
+  
+cli();//stop interrupts
+
+//set timer1 interrupt at 1Hz
+  TCCR1A = 0;// set entire TCCR1A register to 0
+  TCCR1B = 0;// same for TCCR1B
+  TCNT1  = 0;//initialize counter value to 0
+  // set compare match register for 1hz increments
+  OCR1A = 15624;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+  // turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  // Set CS12 and CS10 bits for 1024 prescaler
+  TCCR1B |= (1 << CS12) | (1 << CS10);  
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+
+sei();//allow interrupts
+
+}//end setup
+
+ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
+//generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
+  for(sec = 0; sec <= 3600; sec ++);
+  if(sec >= 3600){
+    hourFlag = true;
+  }else{
+    hourFlag = false;
+  }
+}
+
+void loop(){
+  //do other things here
+    // make 6 steps
+  if ((even == true)&(hourFlag == true)) {
+    myStepper.step(6);
+    hourFlag = false;
+    even = false;
+  }
+  // make 7 steps
+  else if ((even == false)&(hourFlag == true)) 
+  {
+    myStepper.step(7);
+    hourFlag = false;
+    even = true;
+  }
+}
